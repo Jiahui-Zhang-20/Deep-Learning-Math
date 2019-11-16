@@ -77,7 +77,7 @@
 }
 
 \author{
-    \footnotesize \textbf{Anne Gelb} \\[-0.3cm]
+    \footnotesize \textbf{Prof. Anne Gelb} \\[-0.3cm]
     \footnotesize Mathematics \\[-0.3cm]
     \footnotesize Dartmouth College
     \and
@@ -109,12 +109,13 @@
 
 \section*{Abstract}
 
-In this paper, we perform an overview of deep learning, as it is today, from a mathematical perspective.
-We start with the fundamentals of learning, then go on to analyze how different tasks are learnt, what data 
-is used to learn such tasks, and how to better understand said data.
-
-This paper is by no means comprehensive, hence we intend it to simply be a high level overview of the [interesting] 
-topics that define deep learning.
+\begin{abstract}
+    In this paper, we perform an overview of deep learning, as it is today, from a mathematical perspective.
+    We start with the fundamentals of learning, then go on to analyze how different tasks are learnt, what data 
+    is used to learn such tasks, and how to better understand said data.
+    This paper is by no means comprehensive, hence we intend it to simply be a high level overview of the [interesting] 
+    topics that define deep learning.
+\end{abstract}
 
 \pagebreak
 
@@ -860,10 +861,51 @@ Where $V(D)$ is the volume of the domain $D \in \mathbb{R}^n$ and we assume $p(X
 inefficient and intractable as $\dim X >> 0$, we introduce a sampling heuristic to make the method more tractable.
 
 \subsubsection{Rejection Sampling}
-Suppose we had a distribution $q(x)$ also on $X$ where $p(x) \le Mq(x)$ for some $M < \infty$ for all $x \in X$. 
-Starting as some point $x_{(1)} \in X$, we sample $q(x^*)$ from a proposal $x^*$. If we accept $x^*$, 
-then we set $x_{(2)} = x^*$. And if we reject it, we keep $x_{(2)} = x_{(1)}$.
-This gives us a simple iteration scheme: \\[0.5cm]
+Rejection sampling falls under generation techniques that sample random variables in more than one step. These methods are called \textbf{resampling methods}. The 
+first step is usually to provide a sample from an appropriate distribution; and the second step is utilizing a typically stochastic correction mechanism to redirect the sample such that the 
+sample becomes approximately representative of the distribution of interest.
+
+Rejection sampling uses an auxiliary density $q$ for the generation of random quantities from distributions that are not 
+amenable to analytic treatment. We use $q$ to make generations from one such distribution $\pi$. We need that $\pi(x) \le Aq(x)$ for 
+some $A < \infty$ and $x \in X$, where $X$ is some probability space. We call $q$ the blanketing density or an envelope and $A$ is the 
+envelope constant.
+
+For example, enveloping $\mathcal{N}(0, 1)$ with a multiple of $t_1(0, 2.5)$, which is the Cauchy density. 
+It is common that the kernel of $\pi$ is known but the constant ensuring it integrates to $1$ cannot be obtained. 
+It turns out that the rejection method does not need such scaling factor, which is a major advantage 
+in Bayesian statistics. Recall that the kernel of a probability distribution $\pi$ is the 
+form of the probability distribution function in which any factors that are not functions of any of the 
+variables in the domain are omitted.
+
+With some $u \in \mathcal{U}_{[0, 1]}$, we independently draw $x$ from $q$ and accept $x$ as a value generated 
+from $\pi$ if $u \le \frac{\pi(x)}{Aq(x)}$. Otherwise, we reject $x$ and reinitialize until an $x$ is accepted.
+We will now show that the rejection method effectively generates values from $\pi$ by showing the conditional density 
+of $[x | Auq(x) \le \pi(x)]$ is $\pi$.
+\begin{align*}
+    f(x|Auq(x) \le \pi(x)) &=\frac{Pr(Auq(x) < \pi(x)|x)f(x)}{\int Pr(Auq(x) \le \pi(x)|x)f(x)}dx \\
+    & =\frac{[\frac{\pi(x)}{aq(x)}]q(x)}{\int [\frac{\pi(x)}{aq(x)}]q(x)}dx\\
+    &= \frac{\pi(x)}{\int \pi(x)}dx\\
+    &= \pi(x) \text{   if $\pi$ is normalized}
+\end{align*}
+Hence, we have $f(x| Auq(x) \le \pi(x)) = 1$, so the rejection method effectively generates values from $\pi$.
+The efficiency of the method is directly related to the similarity between $\pi$ and $q$ since:
+\begin{align*}
+    Pr(Auq(x) < \pi(x)) &= \int Pr(Auq(x) < \pi(x) | x) q(x) dx\\
+    &= \int(\frac{\pi(x)}{Aq(x)})q(x) d\\
+    &= \frac{1}{A}\int \pi(x) dx
+\end{align*}
+Thus, $A$ must be chosen as close as possible to $\int \pi(x) dx$, which is equal to one if $\pi$ is normalized.
+We hope to increase the acceptance rate while still keeping $q$ an envelope of $\pi$.
+
+Note that often, two densities might be similar in the region concentrating the bulk of probability but their tail behaviors very different, which may lead to a large $A$ (this is undesirable). It 
+is also worth noting that sometimes, a total envelope can only be achieved with a low acceptance rate.
+We can use a small $A$ if we resign to just having a high probability of enveloping $\pi$ rather than having $Aq$ certainly envelop $\pi$.
+
+Finally, if the computation of $\pi$ is costly then some other auxiliary function $s(x) \le \pi(x)$ may be used as a pretest 
+so that $\pi$ is squeezed by $s$ and $q$. We then verify that $u < \frac{s(x)}{Aq(x)}$ while knowing $\frac{s(x)}{Aq(x)} \le \frac{\pi(x)}{q(x)} $. 
+If the pretest is efficient ($s$ is close to $\pi$), then we know $q$ is close to $\pi$.
+
+The iteration scheme for rejection sampling is given as: \\[0.5cm]
 \begin{algorithm}[H]
     \caption{Rejection Sampling}
     \SetAlgoLined
@@ -871,7 +913,7 @@ This gives us a simple iteration scheme: \\[0.5cm]
         \While{$i < N$} {
             Sample $x^*$ from $q(x)$ and $u$ from $\mathcal{U}_{(0,1)}$ \:
             
-            \eIf{$u < \frac{p(x^*)}{Mq(x^*)}$
+            \eIf{$u < \frac{p(x^*)}{Aq(x^*)}$
             }{
                 $x_{(i)} = x^*$ \par
                 accept
@@ -893,6 +935,145 @@ As $M$ increases, the probability of acceptance decreases in inverse proportiona
     \includegraphics[width=0.7\textwidth]{images/rejection}
     \caption{\text{Rejection sampling example, Andrieu et al.}}
 \end{figure}
+
+\subsubsection{Markov Chains}
+We wish to create a Markov chain that approximates some unknown distribution from through 
+only sampling the distribution. This chain should \textit{spend more time} in regions of 
+higher density. Then the convergence rate to the steady-state of this Markov chain should 
+be proportional to the convergence rate to the distribution of interested.
+
+First, we define some conditions on a Markov chain $T$:
+\begin{enumerate}
+    \item \textbf{Memoryless}. We want $p(x_{(i)}|x_{(i-1)}, x_{(i-2)}, \ldots, x_{(1)}) = T(x_{(i)}|x_{(i-1)})$.
+    \item \textbf{Homogeneous}. We want $T = T(x_{(i)} | x_{(i-1)})$ to be invariant for all $i$ such that $\sum_{x_{(i)}}T(x_{(i)}|x_{(i-1)}) = 1$
+    \item \textbf{Ergodic}. For some $n$, $T^n$ has only positive entries (represented with a directed graph $G$, $G$ must be strongly connected).
+    \item \textbf{Aperiodic}. Regardless of initial state, the probability of reaching any state is non-zero as $n \rightarrow \infty$, where $n$ is the number of "steps" (so we cannot get trapped in cycles).
+\end{enumerate}
+Note that since $T \in \mathbb{R}^{m \times m}$ is a real square matrix, the Perron-Frobenius theorem applies. 
+As each column of $T$ sums to 1, the greatest eigenvalue has absolute value $1$ and the remaining eigenvalues 
+are all smaller in magnitude. Further, the second largest eigenvalue in magnitude determines 
+the convergence rate of $T$ to the steady state. We want this second smallest eigenvalue to be as small in 
+magnitude as possible. When we are in a continuous space, the transition matrix $T$ called an integral kernel, $K$, 
+and $p(x^i)$ is an eigen-function (instead of a vector):
+\begin{align*}
+    \int p(x_{(i)})K(x_{(i+1)}|\ x_{(i)})dx_{(i)} = p(x_{(i+1)})
+\end{align*}
+
+\subsubsection{Markov Chain Monte Carlo}
+
+In Markov Chain Monte Carlo, we wish to construct a suitable Markov Chain transition matrix and also ensure its efficient convergence to the density of 
+interest. Consider a distribution $p_x$, $x \in S$ with $\sum_x p_x =1 $ where the state space $S$ can be a subset of the line or even a 
+$d$-dimensional subset of $\mathbb{R}^d$. The problem posed and solved by the Metropolis et al. (1953) was how 
+to construct a Markov chain with stationary distribution $\pi$ such that $\pi(x) = p_x$, $x \in S$.
+
+Let $Q$ be any irreducible transition matrix on $S$ satisfying the symmetry condition $Q(x, y) = Q(y, x)$ for 
+all $x, y \in S$. Define a Markov Chain $(\theta^{(n)})_{n \ge 0}$ as having transition from $x$ to $y$ 
+proposed according to $Q(x, y)$.
+The proposed value for $\theta^{(n+1)}$ is accepted with the probability $min \{ 1, \frac{p_y}{p_x}\}$ and rejected otherwise, leaving the chain in state $x$.
+The transition probabilities $P(x, y)$ of the above chain $(\theta^{(n)})_{n \ge 0}$ are given as:
+\begin{align*}
+    Pr(x, y) = Pr(\theta^{(n+1)}) &= P(\theta^{(n+1)} = y, TA| \theta^{(n)} = x)\\
+    &= Pr(\theta^{(n+1)} = y, \theta^{(n)} = x) Pr(TA)\\
+    &= Q(x, y) \min \left\{ 1, \frac{p_y}{p_x} \right\}
+\end{align*}
+Where $TA$ is transition acceptance. If $y = x$, then:
+\begin{align*}
+    &Pr(x, x) = Pr(\theta^{(n+1)}) = x, TA| \theta^{(n)} = x) + Pr(\theta^{(n=1)} \neq x, \Bar{TA}| \theta^{(n)}=x)\\
+    &= Pr(\theta^{(n+1)} = x|\theta^{(n)} = x)p(TA) + \sum_{y \neq x}Pr(\theta^{(n+1)} =y, \Bar{TA}| \theta^{(n)} = x)\\
+    &= Q(x, x) + \sum_{y \neq x} Q(x, y) \left[ 1 - min \left\{ 1, \frac{p_y}{p_x}\right\} \right]
+\end{align*}
+\textit{INCOMPLETE}. Unbalanced parenthesis.
+
+We have obtained the stationary distribution of this chain. First we show that $p_x$ satisfies 
+reversibility. For $x \neq y$, we have $\pi(x) Pr(x, y) = \pi(y) Pr(y, x)$ for all $x, y \in S$. 
+For $x \neq y$, suppose WLOG, $p_y > p_x$, we have $p_x Pr(x, y) = p_x Q(x, y) = Q(x, y) min \{ 1, \frac{p_y}{p_x}\} p_y = p_y Pr(y, x)$.
+
+Thus, the chain is reversible and there is a stationary distribution. If $Q$ is aperiodic, so 
+is $p$ and the stationary distribution is also the limiting distribution. Note that not all stationary distributions 
+also constitute as limiting distributions. Thus, $P\pi = \pi \nRightarrow \lim_{n \rightarrow \infty} P^n(x, y) = \pi(y)$, where $P$ is the transition probability.
+
+\subsubsection{Metropolis-Hastings}
+
+Consider a distribution $\pi$ from which a sample must be drawn via Markov chains. This is needed when the non-iterative generation of $\pi$ is infeasible.
+In this case, a transition kernel $p(\theta, \phi)$ must be constructed so that $\pi$ is the equilibrium distribution of the chain.
+Consider the reversible chains where the kernel $p$ satisfies:
+\begin{align*}
+    \forall_{(\theta, \phi)}\ \pi(\theta)p(\theta, \phi) = \pi(\phi)p(\phi, \theta)
+\end{align*}
+This is called \textbf{detailed balance}. Detailed balance is a sufficient (but not necessary) condition to ensure convergence.
+The kernel $p(\theta, \phi)$ consists of 2 elements: an arbitrary transition kernel $q(\theta, \phi)$ and a probability $\alpha(\theta, \phi)$ where:
+\begin{align*}
+    p(\theta, \phi) = q(\theta, \phi) \alpha(\theta, \phi),\ \theta \neq \phi
+\end{align*}
+The transition kernel defines a density $p(\theta, \cdot)$, for every $\phi \neq \theta$. Further, $P(\theta, \theta) = 1 - \int q(\theta, \phi) \alpha(\theta, \phi) d\phi$. 
+Then we have:
+\begin{align*}
+    p(\theta, A) = \int_A q(\theta, \phi) \alpha(\theta, \phi) d\phi + I(\theta \in A) \left[1 - \int q(\theta, \phi) \alpha(\theta, \phi) d\phi \right]
+\end{align*}
+For a subset $A$ of the parameter space. The transition kernel defines a mixed distribution for the new state $\phi$ of the chain.
+Hastings (1970) proposed an acceptance probability:
+\begin{align*}
+    \alpha(\theta, \phi) = \min \left\{ 1, \frac{\pi(\phi)q(\phi, \theta)}{\pi(\theta)q(\theta, \phi)} \right\}
+\end{align*}
+This $\alpha$ combined with some transition kernel should give a reversible chain. 
+Roberts and Smith (1994) showed that if $q$ is irreducible and aperiodic, and $\alpha(\theta, \phi) > 0$ for 
+all $(\theta, \phi)$, then the algorithm gives a irreducible, aperiodic chain with transition kernel $p$ and limiting distribution $\pi$.
+
+\begin{algorithm}[H]
+    \caption{Metropolis Hastings}
+    \SetAlgoLined
+    \KwResult{sample set $\{x_{(i)}\}$}
+    initialize $x_{(0)} \in X$
+
+    \For{$i = 0:N-1$}{
+        Sample $x^*$ from $q(x^*|\ x_{(i)})$ and $u$ from $\mathcal{U}_{(0,1)}$ \: \par
+        \eIf{$u < \alpha(x_{(i)}|\ x^*)$ \
+        }{
+            $x_{(i+1)} = x^*$ \par
+            accept
+        }{
+            $x_{(i+1)} = x_{(i)}$ \par
+            reject
+        }\
+    }
+\end{algorithm}
+
+The figure below shows the results of performing MCMC with the Metropolis-Hastings Algorithm on the distribution $p(x) \propto 0.3\exp(-0.2x^2)+0.7\exp(-0.2(x-10)^2)$. It is quite apparent that the histogram from from sampling convergences to the true distribution over iterations
+with the proposal distribution $\mathcal{N}(x^i, 100)$ for $5000$ iterations (Andrieu et al.).
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/metropolis}
+    \caption{MH results, Andrieu et al.}
+\end{figure}
+
+We used the normal distribution in the above example but it is crucial to select a good proposal 
+distribution. For instance, if the standard deviation of the proposal 
+distribution is too low, then the chain will likely get stuck as some single mode 
+of the distribution. However, if the standard deviation is too high, then 
+we get high correlation as the rejection probability is too high. The objective is 
+to have a high acceptance probability while still visiting all the nodes. We will discuss two 
+common choices for this:
+\begin{enumerate}
+    \item \textbf{Symmetric Chains}. A chain is symmetric if its transition kernel $p$ is symmetric 
+    so $p(\theta, \phi) = p(\phi, \theta)$. For Metropolis-Hastings, this means $\alpha = \{1, \frac{\pi(\phi)}{\pi(\theta}\}$, and 
+    does not depend on $q$. Notice $q$ only depends on $| \phi - \theta|$.
+
+    \item \textbf{Random Walk Chains}. A random walk is a Markov chain with evolution given 
+    by $\theta^{(n)} = \theta^{(n_1)} + \omega_j$, where $\omega_j$ is  some random variable. 
+    In general $\omega_j$ are i.i.d with density $f_\omega$. Then we have $q(\theta, \phi) = f_\omega(\phi - \theta)$. 
+    Often, $f_\omega$ is chosen to be the normal distribution. Then a larger variance of $f_\omega$ may 
+    increase coverage of the parameter space but decrease acceptance rate. One method is to 
+    set the variance of $f_\omega$ as $cV$ where $c$ is some tuning parameter that changes based 
+    on the current acceptance rate.
+\end{enumerate}
+
+A useful monitoring device of the method is given by the average percentage of iterations for which moves are accepted. 
+If $q(\cdot, \cdot)$ and $\pi(\cdot, \cdot)$ are continuous, generally smaller step sizes lead to greater acceptance 
+rates but slower convergence rates.
+
+Markov Chain Monte Carlo is particularly advantageous because we are able to derive certain properties of the 
+distribution by approximating it up to a constant factor. This is important because normalization is often a non-trivial task.
+Also, the algorithm can be parallelized so that multiple independent chains are evaluated at the same time.
 
 \pagebreak
 
@@ -1000,6 +1181,101 @@ applications thereof in deep learning. But first, let us explore the nature of s
 
 \section{Understanding Datasets: Bayes Error}
 
+In developing and deploying neural networks, the vast majority of attention is given to the model architectures, with very little 
+attention given to the data from which the model will learn. We consider how to analyze the \textit{learnability} of 
+datasets with respect to the learning objective. We will consider this problem with respect to classification problems. 
+Our objective is to characterize the lower bound of the error rate of a given dataset.
+
+When dealing with classifiers and classification problems, there is usually some overlying architecture mapping 
+some data to an element of a discrete set of classes. The architecture can take the form of a CNN, an autoencoder, 
+or even a simple linear regression. We can generalize this relationship with the equation:
+\begin{align*}
+    F(X) = c_i, c_i\in C
+\end{align*}
+Where $C$ is the collection of all discrete classes, and $X$ is the data. Hence $F$ is a mapping $F: C \rightarrow X$.
+
+\textit{INCOMPLETE}. Shouldn't F's mapping be reversed?
+
+However in practice the algorithms used to classify data are not deterministic, but rather probabilistic. With this 
+perspective, given a prior distribution of data as well as the likelihood (the distribution of $X$ conditional on the fact it 
+belongs to a class $i$), the result is the posterior distribution. This result uses Bayes Theorem to relate 
+conditional probabilities. Consider an $N$-class classification problem with:
+\begin{align*}
+    \text{Prior } &P(c_i)_{c_i \in L} \text{ s.t. } \sum_{i=1}^L P(c_i) = 0 \\
+    \text{Likelihood } &P(X |\ c_i) \\
+    \text{Posterior } &P(c_i |\ X)
+\end{align*}
+In a 2-class problem with classes $w_1$ and $w_2$, we could have the posterior distribution look something like this: 
+
+\textit{INCOMPLETE}. Image here.
+
+The error term (highlighted in purple) is the \textit{Bayes Error Rate}, which is the minimal achievable error 
+rate inherent in the distribution of the data. Considering an $m$-class classification problem, we have i.i.d. 
+pairs of training data in the form $\{x_i,y_i\}_{i =1}^n$. Each $x_i$ is a realization of the random variable 
+$X \in \mathbb{R}^d$ (each feature vector in this case is $d$-dimensional) and each $y_i$ is a realization 
+of the random variable $Y \in \{1,2,...,m\}$. In this experimental setup, with prior probabilities of the $m$ 
+classes $p_k = P(Y = k)$ having the prior probabilities sum to 1 across the support of Y, and with conditional 
+feature densities $f_k(x) = P(x|Y = k), k = 1,...,m$ (these can be thought of as the likelihood function), the BER is:
+\begin{align*}
+    \epsilon^m = 1 - \int \max\{ p_1 f_1(x), p_2 f_2(x), ..., p_m f_m(x)\}dx
+\end{align*}
+In analyzing the equation above, we can see that each term of the $\max$ function is the posterior probability 
+$P(Y = k|\ x)$, which mirrors the probabilities in the image above. If we were to simplify the equation above 
+to a 2-class problem, with priors $p_1$ and $p_2$, with conditional densities $f_1$ and $f_2$, we have posterior 
+probabilities $p_1 f_1$ and $p_2 f_2$. We can break down the posterior support into 2 spaces that span it: one 
+where $p_1 f_1 \leq p_2 f_2$ and the other where $p_2 f_2 \leq p_1 f_1$, so the integral for the 2-class case becomes:
+\begin{align*}
+    \epsilon^2 = 1 - \left( \int_{p_1f_1\leq p_2f_2} p_2 f_2(x) dx + \int_{p_2f_2\leq p_1f_1} p_1 f_1(x) dx \right)
+\end{align*}
+The implications of this rate are significant:
+\begin{enumerate}
+    \item \textbf{It holds irrespective of the architecture used for the classification problem}. In reality the 
+    true underlying distribution of the data and the classes is unknown. CNN's, autoencoders, and other architectures 
+    try to estimate these spaces, but do not provide concrete function definitions of the spaces themselves. For 
+    example, in the two-class diagram above, a neural network could approximate the posterior distributions for the 
+    data, but the true distributions remain unknown. So one facet of classifying data is trying best to model 
+    the posterior probability distributions.
+
+    \item \textbf{It can be used to quantify the separability of data}. Much of AFRL's image recognition efforts 
+    are moving towards the problem of bridging the measured-synthetic data gap. One of the underlying 
+    issues in this problem is the separability of measured and synthetic data. Confusion matrices and tSNE plots 
+    are often used to represent algorithm performance, but they have some implications associated with their conclusions:
+    \begin{itemize}
+        \item \textbf{They depend on the architecture used for the classification problem}. The confusion matrix performance 
+        as well as tSNE scatter vary with the strength of the neural network.
+
+        \item \textbf{They do not yield strong quantitative results}. The confusion matrix yields some quantitative performance 
+        results, but they are a function of the test data. If test data that is highly similar or dissimilar to the training 
+        data, the performance metric will vary.
+    \end{itemize}
+\end{enumerate}
+The BER estimate addresses these issues. As previously discussed, it characterizes an innate quality in the training 
+data, independent of the architecture. Furthermore, it gives a numerical value for the separability of data instead of 
+a simply visual explanation (tSNE) or varying performance metrics based on test data (confusion matrices). While the metric 
+has many strengths, \textbf{it cannot be directly calculated} for many distributions of data, especially complex distributions 
+from which image data is sampled. Thus, it is a quantity that must be estimated.
+
+\subsection{Estimating the Bayes Error Rate} % INCOMPLETE % Cite papers for proposed metrics
+
+There have been many ways to estimate the Bayes error rate, and many of them rely on divergence measures between distributions. 
+The Bhattacharyya distance, Chernoff Bound, and other divergence measures provide some bounds for the BER, but they happen to be 
+parametric estimates that require the assumption of a probability distribution before the estimation.
+
+In Sekeh et. al.\cite{ber}, a non-parametric estimate of the Bayes error is introduced:
+\begin{align*}
+    \mathbb{R}_{n_i,n_j}^{(i,j)} = \mathbb{R}_{n_i,n_j}^{(i,j)}(X)
+\end{align*}
+Where $\mathbb{R}_{n_i,n_j}^{(i,j)}$ is the number of cross-labels connecting class $i$ to class $j$ in a global minimum-spanning tree 
+connecting all samples with all classes. With this, the authors show that this statistic is an estimator of $\delta_{ij}^m$, which bounds the 
+BER:
+\begin{align*}
+    \frac{\mathbb{R}_{n_i,n_j}^{(i,j)}(X)}{2n} \rightarrow \delta_{ij}^m
+\end{align*}
+With this, the an upper- and lower-bound for the error rate is derived:
+\begin{align*}
+    \frac{m}{m-1} \left[ 1 - \left(1 - \frac{2m}{m-1} \sum_{i=1}^{m-1} \sum_{j=i+1}^m \delta_{ij}^m \right)^{\frac{1}{2}} \right] \leq \epsilon^m \leq \sum_{i=1}^{m-1} \sum_{j=i+1}^m \delta_{ij}^m
+\end{align*}
+
 \pagebreak
 
 %----------------------------------------------------------------------------------------
@@ -1035,6 +1311,10 @@ applications thereof in deep learning. But first, let us explore the nature of s
     \bibitem{wass}
         Givens, Shortt. (1984).
         \emph{\href{https://projecteuclid.org/download/pdf_1/euclid.mmj/1029003026}{A Class of Wasserstein Metrics for Probability Distributions}}
+
+    \bibitem{ber}
+        Sekeh et. al. (2019).
+        \emph{\href{https://arxiv.org/pdf/1811.06419.pdf}{Learning to Bound the Multi-class Bayes Error}}
 
 \end{thebibliography}
 
